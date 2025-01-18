@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion d'Argent de Poche</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        header {
+            background-color: #007bff;
+            color: white;
+            padding: 1rem;
+            text-align: center;
+        }
+        main {
+            margin: 20px;
+        }
+        .form-container {
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        input, button {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .switch-link {
+            text-align: center;
+            margin-top: 10px;
+        }
+        .switch-link a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        .switch-link a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Gestion d'Argent de Poche</h1>
+    </header>
+    <main>
+        <section id="login" style="display: block;">
+            <div class="form-container">
+                <h2>Connexion</h2>
+                <form id="login-form">
+                    <input type="email" id="login-email" placeholder="Email" required>
+                    <input type="password" id="login-password" placeholder="Mot de passe" required>
+                    <button type="button" onclick="login()">Se connecter</button>
+                </form>
+                <div class="switch-link">
+                    <p>Pas de compte ? <a href="#" onclick="showRegistration()">S'inscrire</a></p>
+                </div>
+            </div>
+        </section>
+        <section id="registration" style="display: none;">
+            <div class="form-container">
+                <h2>Inscription Manager</h2>
+                <form id="manager-registration-form">
+                    <input type="text" id="manager-name" placeholder="Nom" required>
+                    <input type="email" id="manager-email" placeholder="Email" required>
+                    <input type="password" id="manager-password" placeholder="Mot de passe" required>
+                    <button type="button" onclick="registerManager()">S'inscrire</button>
+                </form>
+                <div class="switch-link">
+                    <p>Déjà un compte ? <a href="#" onclick="showLogin()">Se connecter</a></p>
+                </div>
+            </div>
+        </section>
+        <section id="dashboard" style="display: none;">
+            <div class="form-container">
+                <h2>Créer un Compte Enfant</h2>
+                <form id="user-creation-form">
+                    <input type="text" id="child-name" placeholder="Nom de l'enfant" required>
+                    <input type="number" id="initial-balance" placeholder="Solde initial" required>
+                    <button type="button" onclick="addUser()">Ajouter</button>
+                </form>
+            </div>
+            <div id="user-list" class="form-container">
+                <h2>Comptes Enfants</h2>
+                <ul id="user-accounts"></ul>
+            </div>
+            <div class="form-container">
+                <h2>Gestion des Comptes</h2>
+                <form id="update-balance-form">
+                    <select id="user-select"></select>
+                    <input type="number" id="amount" placeholder="Montant" required>
+                    <button type="button" onclick="addPocketMoney()">Ajouter</button>
+                    <button type="button" onclick="withdrawMoney()">Retirer</button>
+                </form>
+            </div>
+            <div class="form-container">
+                <h2>Configurer Salaire Automatique</h2>
+                <form id="auto-salary-form">
+                    <select id="auto-salary-user-select"></select>
+                    <input type="number" id="weekly-salary" placeholder="Salaire hebdomadaire" required>
+                    <button type="button" onclick="setAutoSalary()">Configurer</button>
+                </form>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        let manager = null;
+        let users = JSON.parse(localStorage.getItem('users')) || [];
+
+        function saveToLocalStorage() {
+            localStorage.setItem('users', JSON.stringify(users));
+        }
+
+        function showRegistration() {
+            document.getElementById('login').style.display = 'none';
+            document.getElementById('registration').style.display = 'block';
+        }
+
+        function showLogin() {
+            document.getElementById('registration').style.display = 'none';
+            document.getElementById('login').style.display = 'block';
+        }
+
+        function registerManager() {
+            const name = document.getElementById('manager-name').value;
+            const email = document.getElementById('manager-email').value;
+            const password = document.getElementById('manager-password').value;
+
+            if (name && email && password) {
+                manager = { name, email, password };
+                localStorage.setItem('manager', JSON.stringify(manager));
+                alert(`Bienvenue, ${name}!`);
+                document.getElementById('registration').style.display = 'none';
+                document.getElementById('dashboard').style.display = 'block';
+                updateUserSelect();
+            } else {
+                alert('Veuillez remplir tous les champs.');
+            }
+        }
+
+        function login() {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+
+            const storedManager = JSON.parse(localStorage.getItem('manager'));
+            if (storedManager && storedManager.email === email && storedManager.password === password) {
+                alert('Connexion réussie !');
+                document.getElementById('login').style.display = 'none';
+                document.getElementById('dashboard').style.display = 'block';
+                updateUserSelect();
+            } else {
+                alert('Email ou mot de passe incorrect.');
+            }
+        }
+
+        function addUser() {
+            const childName = document.getElementById('child-name').value;
+            const initialBalance = parseFloat(document.getElementById('initial-balance').value);
+
+            if (childName && !isNaN(initialBalance)) {
+                const newUser = { name: childName, balance: initialBalance, weeklySalary: 0 };
+                users.push(newUser);
+                saveToLocalStorage();
+                updateUserList();
+                updateUserSelect();
+                document.getElementById('user-creation-form').reset();
+                alert(`Compte créé pour ${childName} avec un solde de ${initialBalance}€.`);
+            } else {
+                alert('Veuillez remplir tous les champs correctement.');
+            }
+        }
+
+        function updateUserList() {
+            const userList = document.getElementById('user-accounts');
+            userList.innerHTML = '';
+            users.forEach((user) => {
+                const li = document.createElement('li');
+                li.textContent = `${user.name}: ${user.balance.toFixed(2)}€`;
+                userList.appendChild(li);
+            });
+        }
+
+        function updateUserSelect() {
+            const userSelect = document.getElementById('user-select');
+            const autoSalaryUserSelect = document.getElementById('auto-salary-user-select');
+            userSelect.innerHTML = '';
+            autoSalaryUserSelect.innerHTML = '';
+            users.forEach((user, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = user.name;
+                userSelect.appendChild(option);
+
+                const autoOption = document.createElement('option');
+                autoOption.value = index;
+                autoOption.textContent = user.name;
+                autoSalaryUserSelect.appendChild(autoOption);
+            });
+        }
+
+        function addPocketMoney() {
+            const selectedIndex = document.getElementById('user-select').value;
+            const amount = parseFloat(document.getElementById('amount').value);
+
+            if (!isNaN(amount) && selectedIndex !== "") {
+                users[selectedIndex].balance += amount;
+                saveToLocalStorage();
+                updateUserList();
+                alert(`Ajouté ${amount}€ à ${users[selectedIndex].name}.`);
+            } else {
+                alert('Veuillez sélectionner un utilisateur et entrer un montant valide.');
+            }
+        }
+
+        function withdrawMoney() {
+            const selectedIndex = document.getElementById('user-select').value;
+            const amount = parseFloat(document.getElementById('amount').value);
+
+            if (!isNaN(amount) && selectedIndex !== "" && amount <= users[selectedIndex].balance) {
+                users[selectedIndex].balance -= amount;
+                saveToLocalStorage();
+                updateUserList();
+                alert(`Retiré ${amount}€ de ${users[selectedIndex].name}.`);
+            } else {
+                alert('Montant invalide ou insuffisant.');
+            }
+        }
+
+        function setAutoSalary() {
+            const selectedIndex = document.getElementById('auto-salary-user-select').value;
+            const weeklySalary = parseFloat(document.getElementById('weekly-salary').value);
+
+            if (!isNaN(weeklySalary) && selectedIndex !== "") {
+                users[selectedIndex].weeklySalary = weeklySalary;
+                saveToLocalStorage();
+                alert(`Salaire hebdomadaire de ${weeklySalary}€ configuré pour ${users[selectedIndex].name}.`);
+                startAutoSalary();
+            } else {
+                alert('Veuillez sélectionner un utilisateur et entrer un salaire valide.');
+            }
+        }
+
+        function startAutoSalary() {
+            setInterval(() => {
+                users.forEach((user) => {
+                    if (user.weeklySalary > 0) {
+                        user.balance += user.weeklySalary;
+                    }
+                });
+                saveToLocalStorage();
+                updateUserList();
+            }, 7 * 24 * 60 * 60 * 1000); // 1 semaine
+        }
+
+        window.onload = function () {
+            updateUserList();
+            updateUserSelect();
+        };
+    </script>
+</body>
+</html>
